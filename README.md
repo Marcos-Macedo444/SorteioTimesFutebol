@@ -53,6 +53,14 @@ npm run build
 
 Os arquivos finais são gerados em `dist`.
 
+## Preview local do build
+
+```bash
+npm run preview
+```
+
+Use esse comando depois do build para conferir localmente uma versão parecida com a publicação final.
+
 ## Testes e lint
 
 ```bash
@@ -62,23 +70,21 @@ npm run lint
 
 Os testes cobrem parser, linhas vazias, prefixos irrelevantes, nomes repetidos, desconhecidos com estrelas sorteadas, vagas sobrando, suplentes, WhatsApp, substituição da lista original e créditos do criador.
 
-## Deploy grátis no Render
+## Deploy grátis na Vercel
 
-Crie um Static Site no Render apontando para este repositório.
+Este projeto está pronto para deploy na Vercel como app Vite estático.
 
-- Build command: `npm install && npm run build`
-- Publish directory: `dist`
+Configuração esperada:
 
-O arquivo `render.yaml` também documenta a configuração:
+- Framework Preset: `Vite`
+- Root Directory: `./`
+- Install Command: `npm install`
+- Build Command: `npm run build`
+- Output Directory: `dist`
 
-```yaml
-services:
-  - type: web
-    name: sorteio-times-futebol
-    env: static
-    buildCommand: npm install && npm run build
-    staticPublishPath: dist
-```
+Este projeto não precisa de variáveis de ambiente na Vercel.
+
+Também não foi criado `vercel.json`, porque o app não usa React Router nem rotas internas. Ele é uma tela única em `/`. Se no futuro forem adicionadas rotas internas de SPA, pode ser necessário criar um `vercel.json` com rewrite para `/index.html`.
 
 ## Como usar
 
