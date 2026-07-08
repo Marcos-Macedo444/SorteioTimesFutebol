@@ -2,10 +2,12 @@ import {
   Clipboard,
   Download,
   FileText,
+  Moon,
   Printer,
   RefreshCw,
   Shuffle,
   Sparkles,
+  Sun,
   Trash2,
   Upload,
   UserPlus,
@@ -35,8 +37,12 @@ const skillOptions: Array<{ value: SkillRating; label: string }> = [
   { value: 5, label: "5 estrelas - muito bom" }
 ];
 
+type ThemeMode = "dark" | "light";
+const THEME_STORAGE_KEY = "sorteio-times-pelada:theme";
+
 function App() {
   const initialState = useMemo(() => loadAppState(), []);
+  const [theme, setTheme] = useState<ThemeMode>(() => loadThemePreference());
   const [rawText, setRawText] = useState(initialState.rawText);
   const [players, setPlayers] = useState<Player[]>(initialState.players);
   const [config, setConfig] = useState<DrawConfig>(initialState.config);
@@ -50,6 +56,11 @@ function App() {
   useEffect(() => {
     saveAppState({ rawText, players, config, history });
   }, [rawText, players, config, history]);
+
+  useEffect(() => {
+    document.documentElement.dataset.theme = theme;
+    localStorage.setItem(THEME_STORAGE_KEY, theme);
+  }, [theme]);
 
   const validPlayers = players.filter((player) => player.name.trim().length > 0);
   const activeCapacity = config.drawAllPlayers ? validPlayers.length : config.teamCount * config.playersPerTeam;
@@ -232,6 +243,16 @@ function App() {
           </div>
         </div>
         <div className="summary-strip" aria-label="Resumo atual">
+          <button
+            className="theme-toggle"
+            type="button"
+            onClick={() => setTheme((currentTheme) => (currentTheme === "dark" ? "light" : "dark"))}
+            aria-label={theme === "dark" ? "Ativar modo claro" : "Ativar modo escuro"}
+            title={theme === "dark" ? "Ativar modo claro" : "Ativar modo escuro"}
+          >
+            {theme === "dark" ? <Sun aria-hidden="true" size={18} /> : <Moon aria-hidden="true" size={18} />}
+            {theme === "dark" ? "Modo claro" : "Modo escuro"}
+          </button>
           <span>{validPlayers.length} jogadores</span>
           <span>{history.length} sorteios no histórico</span>
         </div>
@@ -565,6 +586,14 @@ function parseSkillValue(value: string): SkillRating {
   return numericValue === 1 || numericValue === 2 || numericValue === 3 || numericValue === 4 || numericValue === 5
     ? numericValue
     : "unknown";
+}
+
+function loadThemePreference(): ThemeMode {
+  if (typeof localStorage === "undefined") {
+    return "dark";
+  }
+
+  return localStorage.getItem(THEME_STORAGE_KEY) === "light" ? "light" : "dark";
 }
 
 function clampNumber(value: number, min: number, max: number): number {
