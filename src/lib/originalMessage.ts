@@ -1,6 +1,6 @@
 import type { DrawResult } from "../types";
 import { formatTeamsBlockForOriginalMessage } from "./formatResult";
-import { extractNameFromLine } from "./playerParser";
+import { findPlayerListBlock, isRulesOrWarningLine, isSupplementsMarkerLine } from "./playerParser";
 
 export function generateFullMessageWithDraw(originalMessage: string, result: DrawResult): string {
   const lines = originalMessage.replace(/\r\n/g, "\n").replace(/\r/g, "\n").split("\n");
@@ -18,58 +18,43 @@ export function generateFullMessageWithDraw(originalMessage: string, result: Dra
 }
 
 export function findOriginalPlayerListRange(lines: string[]): { start: number; end: number } | null {
-  const firstPlayerLineIndex = lines.findIndex((line) => extractNameFromLine(line) !== null);
+  const listBlock = findPlayerListBlock(lines);
 
-  if (firstPlayerLineIndex === -1) {
+  if (!listBlock) {
     return null;
   }
 
-  let start = firstPlayerLineIndex;
-  const titleIndex = findImmediatePreviousContentLine(lines, firstPlayerLineIndex);
+  const start = listBlock.markerIndex ?? listBlock.firstPlayerIndex;
+  let end = listBlock.endIndex;
 
-  if (titleIndex !== null && /^\s*lista\s+aberta\s*:?\s*$/iu.test(lines[titleIndex])) {
-    start = titleIndex;
-  }
-
-  let end = firstPlayerLineIndex;
-  while (end < lines.length) {
-    const line = lines[end];
-
-    if (line.trim() === "") {
-      end += 1;
-      continue;
-    }
-
-    if (isNumberedPlayerOrEmptyLine(line)) {
-      end += 1;
-      continue;
-    }
-
-    break;
-  }
-
-  if (end < lines.length && /^\s*suplentes\s*:?\s*$/iu.test(lines[end])) {
-    end += 1;
-    while (end < lines.length && lines[end].trim() === "") {
-      end += 1;
-    }
+  if (isEmptySupplementsSection(lines, end)) {
+    end = skipSupplementsSection(lines, end);
   }
 
   return { start, end };
 }
 
-function isNumberedPlayerOrEmptyLine(line: string): boolean {
-  return /^\s*\d{1,3}(?:\s*$|\s+.+$|\s*[-.)]\s*.*$)/u.test(line);
-}
-
-function findImmediatePreviousContentLine(lines: string[], fromIndex: number): number | null {
-  for (let index = fromIndex - 1; index >= 0; index -= 1) {
-    if (lines[index].trim() !== "") {
-      return index;
-    }
+function isEmptySupplementsSection(lines: string[], supplementsIndex: number): boolean {
+  if (supplementsIndex >= lines.length || !isSupplementsMarkerLine(lines[supplementsIndex])) {
+    return false;
   }
 
-  return null;
+  let nextContentIndex = supplementsIndex + 1;
+  while (nextContentIndex < lines.length && lines[nextContentIndex].trim() === "") {
+    nextContentIndex += 1;
+  }
+
+  return nextContentIndex >= lines.length || isRulesOrWarningLine(lines[nextContentIndex]);
+}
+
+function skipSupplementsSection(lines: string[], supplementsIndex: number): number {
+  let end = supplementsIndex + 1;
+
+  while (end < lines.length && lines[end].trim() === "") {
+    end += 1;
+  }
+
+  return end;
 }
 
 function trimTrailingEmpty(lines: string[]): string[] {

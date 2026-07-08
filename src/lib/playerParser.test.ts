@@ -77,4 +77,24 @@ Suplentes:
     expect(cleanPlayerName("pago JG")).toBe("JG");
     expect(cleanPlayerName("presença Luiz Fernando")).toBe("Luiz Fernando");
   });
+
+  it("prioritizes names after the list marker and ignores context numbers", () => {
+    const names = parsePlayerNames(`VALOR: R$ 19,00💰
+Pix: 27988105707
+Futebol sexta feira 10/06
+21h as 23h Green Ball
+(2) HORAS DE FUTEBOL
+
+LISTA ABERTA
+
+1. Theo
+2 Jayme
+3 Matheus
+
+⚠️ Regras:
+* Chegar 20 minutos antes`);
+
+    expect(names).toEqual(["Theo", "Jayme", "Matheus"]);
+    expect(names).not.toContain("Horas de Futebol");
+  });
 });

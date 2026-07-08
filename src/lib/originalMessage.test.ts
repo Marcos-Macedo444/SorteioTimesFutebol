@@ -42,6 +42,71 @@ Suplentes:
     expect(generated).not.toContain("1  Theo");
     expect(generated).not.toContain("Suplentes:\n\n⚠️🚨");
   });
+
+  it("preserves all context before and after the real player list example", () => {
+    const original = `VALOR: R$ 19,00💰
+Pix: 27988105707
+
+Nome: Marcos Filipe de Paula Macêdo
+Banco: Nubank
+
+Futebol sexta feira 10/06
+21h as 23h Green Ball
+(2) HORAS DE FUTEBOL
+
+LISTA ABERTA
+
+1. Theo
+   2 Jayme
+   3  Matheus
+   4 carlin
+   5 Brayan
+   6 Renan Vieira
+   7 Batestin
+   8 João Victor
+   9 daniel Calixto
+   10 e faixa Marquin
+   11 Brunin
+   12 JG
+   13 Josaneo
+   14 Gabriel C.
+   15 Luiz Fernando
+   16 Luiz Henrique
+   17 Gabriel Santos
+   18  Luiz Filippe
+   19 Marquinhos
+   20 kaua kvn
+   21 Matheus
+   22 samuel
+   23 emanuel
+   24 bryan
+
+Suplentes:
+
+⚠️🚨 Regras do FUT: ⚠️🚨
+
+* Jogo acaba com 2 gols ou 7 minutos marcados no celular de alguem;
+* Tempo esgotou, sair LINHA DE FUNDO o jogo acaba;`;
+
+    const generated = generateFullMessageWithDraw(original, createResult());
+
+    expect(generated).toContain("VALOR: R$ 19,00💰");
+    expect(generated).toContain("Pix: 27988105707");
+    expect(generated).toContain("Nome: Marcos Filipe de Paula Macêdo");
+    expect(generated).toContain("Banco: Nubank");
+    expect(generated).toContain("Futebol sexta feira 10/06");
+    expect(generated).toContain("21h as 23h Green Ball");
+    expect(generated).toContain("(2) HORAS DE FUTEBOL");
+    expect(generated).toContain("(2) HORAS DE FUTEBOL\n\n⚽ TIMES SORTEADOS");
+    expect(generated).toContain("* JG — Não conheço");
+    expect(generated).toContain("* *Vaga Sobrando*");
+    expect(generated).toContain("⚠️🚨 Regras do FUT: ⚠️🚨");
+    expect(generated).toContain("* Tempo esgotou, sair LINHA DE FUNDO o jogo acaba;");
+    expect(generated).not.toContain("LISTA ABERTA");
+    expect(generated).not.toContain("1. Theo");
+    expect(generated).not.toContain("24 bryan");
+    expect(generated).not.toContain("Suplentes:\n\n⚠️🚨");
+  });
 });
 
 function createResult(): DrawResult {

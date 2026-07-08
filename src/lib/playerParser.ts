@@ -6,9 +6,17 @@ const IRRELEVANT_PREFIXES = [
 
 const LOWERCASE_PARTICLES = new Set(["da", "de", "di", "do", "das", "dos", "e"]);
 
+export interface PlayerListBlock {
+  markerIndex: number | null;
+  firstPlayerIndex: number;
+  endIndex: number;
+}
+
 export function parsePlayerNames(input: string): string[] {
-  const candidates = input
-    .split(/\r?\n/u)
+  const lines = input.split(/\r?\n/u);
+  const listBlock = findPlayerListBlock(lines);
+  const sourceLines = listBlock ? lines.slice(listBlock.firstPlayerIndex, listBlock.endIndex) : [];
+  const candidates = sourceLines
     .map(extractNameFromLine)
     .filter((name): name is string => Boolean(name));
 
@@ -29,6 +37,130 @@ export function extractNameFromLine(line: string): string | null {
 
 export function isNumberedListLine(line: string): boolean {
   return /^\s*\d{1,3}(?:\s*$|\s+.+$|\s*[-.)]\s*.*$)/u.test(line);
+}
+
+export function isListMarkerLine(line: string): boolean {
+  return /^\s*(?:lista(?:\s+aberta)?|jogadores|confirmados)\s*:?\s*$/iu.test(line);
+}
+
+export function isSupplementsMarkerLine(line: string): boolean {
+  return /^\s*suplentes\s*:?\s*$/iu.test(line);
+}
+
+export function isRulesOrWarningLine(line: string): boolean {
+  return /^\s*(?:⚠|🚨|regras\b|avisos?\b)/iu.test(line);
+}
+
+export function findPlayerListBlock(lines: string[]): PlayerListBlock | null {
+  const markerIndex = lines.findIndex(isListMarkerLine);
+
+  if (markerIndex !== -1) {
+    const firstPlayerIndex = findNextPlayerLineIndex(lines, markerIndex + 1);
+    return firstPlayerIndex === null ? null : buildListBlock(lines, markerIndex, firstPlayerIndex);
+  }
+
+  const firstSequentialPlayerIndex = findSequentialPlayerLineIndex(lines);
+  return firstSequentialPlayerIndex === null ? null : buildListBlock(lines, null, firstSequentialPlayerIndex);
+}
+
+function buildListBlock(lines: string[], markerIndex: number | null, firstPlayerIndex: number): PlayerListBlock {
+  return {
+    markerIndex,
+    firstPlayerIndex,
+    endIndex: findNumberedListEndIndex(lines, firstPlayerIndex)
+  };
+}
+
+function findNextPlayerLineIndex(lines: string[], startIndex: number): number | null {
+  for (let index = startIndex; index < lines.length; index += 1) {
+    const line = lines[index];
+
+    if (line.trim() === "") {
+      continue;
+    }
+
+    if (isSupplementsMarkerLine(line) || isRulesOrWarningLine(line)) {
+      return null;
+    }
+
+    if (extractNameFromLine(line) !== null) {
+      return index;
+    }
+  }
+
+  return null;
+}
+
+function findSequentialPlayerLineIndex(lines: string[]): number | null {
+  for (let index = 0; index < lines.length; index += 1) {
+    const number = getNumberedLineIndex(lines[index]);
+
+    if (number !== 1 || extractNameFromLine(lines[index]) === null) {
+      continue;
+    }
+
+    if (hasFollowingPlayerLine(lines, index + 1)) {
+      return index;
+    }
+  }
+
+  return null;
+}
+
+function hasFollowingPlayerLine(lines: string[], startIndex: number): boolean {
+  for (let index = startIndex; index < Math.min(lines.length, startIndex + 8); index += 1) {
+    const line = lines[index];
+
+    if (line.trim() === "") {
+      continue;
+    }
+
+    if (isSupplementsMarkerLine(line) || isRulesOrWarningLine(line)) {
+      return false;
+    }
+
+    const number = getNumberedLineIndex(line);
+    if (number !== null && number > 1 && extractNameFromLine(line) !== null) {
+      return true;
+    }
+
+    if (!isNumberedListLine(line)) {
+      return false;
+    }
+  }
+
+  return false;
+}
+
+function findNumberedListEndIndex(lines: string[], firstPlayerIndex: number): number {
+  let endIndex = firstPlayerIndex;
+
+  while (endIndex < lines.length) {
+    const line = lines[endIndex];
+
+    if (line.trim() === "") {
+      endIndex += 1;
+      continue;
+    }
+
+    if (isSupplementsMarkerLine(line) || isRulesOrWarningLine(line)) {
+      break;
+    }
+
+    if (isNumberedListLine(line)) {
+      endIndex += 1;
+      continue;
+    }
+
+    break;
+  }
+
+  return endIndex;
+}
+
+function getNumberedLineIndex(line: string): number | null {
+  const match = line.match(/^\s*(\d{1,3})(?:(?:\s*[-.)]\s*)|\s+)/u);
+  return match ? Number(match[1]) : null;
 }
 
 export function cleanPlayerName(rawName: string): string {
