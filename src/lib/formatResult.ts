@@ -1,7 +1,11 @@
-import type { DrawResult, SkillRating } from "../types";
+import type { AppliedSkill, DrawPlayer, DrawResult, SkillRating } from "../types";
 
-export function formatSkillLabel(skill: SkillRating): string {
-  return skill === "unknown" ? "Não conheço" : "★".repeat(skill);
+export function formatSkillLabel(skill: SkillRating, appliedSkill?: AppliedSkill): string {
+  if (skill === "unknown") {
+    return `Não conheço · sorteado como ${formatStars(appliedSkill ?? 3, "plain")}`;
+  }
+
+  return formatStars(skill, "plain");
 }
 
 export function formatDrawForWhatsApp(result: Omit<DrawResult, "copiedText">): string {
@@ -9,32 +13,63 @@ export function formatDrawForWhatsApp(result: Omit<DrawResult, "copiedText">): s
 
   for (const team of result.teams) {
     lines.push(team.name);
-    for (const player of team.players) {
-      lines.push(`* ${player.name} ${formatSkillForWhatsApp(player.skill)}`);
-    }
+    lines.push(...formatTeamPlayerLinesForWhatsApp(team.players, team.vacancyCount));
+    lines.push("");
     lines.push(`Total: ${team.totalSkill} estrelas`);
     lines.push(`Média: ${team.averageSkill.toFixed(1)}`);
     lines.push("");
   }
 
   if (result.substitutes.length > 0) {
-    lines.push("Suplentes");
+    lines.push("Suplentes:");
     for (const player of result.substitutes) {
-      lines.push(`* ${player.name} ${formatSkillForWhatsApp(player.skill)}`);
+      lines.push(`* ${formatPlayerForWhatsApp(player)}`);
     }
     lines.push("");
   }
 
-  lines.push("Observação:");
+  lines.push("Resumo:");
   lines.push(`${result.observation} Diferença de ${result.balance.totalRange.toFixed(0)} estrelas entre os times.`);
 
   return lines.join("\n").trim();
 }
 
-export function formatSkillForWhatsApp(skill: SkillRating): string {
-  if (skill === "unknown") {
-    return "Não conheço";
+export function formatTeamsBlockForOriginalMessage(result: DrawResult): string {
+  const lines = ["⚽ TIMES SORTEADOS", ""];
+
+  for (const team of result.teams) {
+    lines.push(team.name);
+    lines.push(...formatTeamPlayerLinesForWhatsApp(team.players, team.vacancyCount));
+    lines.push("");
   }
 
-  return "⭐".repeat(skill);
+  if (result.substitutes.length > 0) {
+    lines.push("Suplentes:");
+    for (const player of result.substitutes) {
+      lines.push(`* ${formatPlayerForWhatsApp(player)}`);
+    }
+    lines.push("");
+  }
+
+  return lines.join("\n").trim();
+}
+
+export function formatTeamPlayerLinesForWhatsApp(players: DrawPlayer[], vacancyCount: number): string[] {
+  return [
+    ...players.map((player) => `* ${formatPlayerForWhatsApp(player)}`),
+    ...Array.from({ length: vacancyCount }, () => "* *Vaga Sobrando*")
+  ];
+}
+
+export function formatPlayerForWhatsApp(player: DrawPlayer): string {
+  if (player.wasUnknown) {
+    return `${player.name} — Não conheço ${formatStars(player.appliedSkill, "whatsapp")}`;
+  }
+
+  return `${player.name} ${formatStars(player.appliedSkill, "whatsapp")}`;
+}
+
+export function formatStars(skill: AppliedSkill, mode: "plain" | "whatsapp" = "plain"): string {
+  const star = mode === "whatsapp" ? "⭐" : "★";
+  return star.repeat(skill);
 }

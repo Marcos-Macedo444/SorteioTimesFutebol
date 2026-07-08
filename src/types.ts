@@ -6,10 +6,19 @@ export interface Player {
   skill: SkillRating;
 }
 
+export type AppliedSkill = 1 | 2 | 3 | 4 | 5;
+
+export interface DrawPlayer extends Player {
+  appliedSkill: AppliedSkill;
+  wasUnknown: boolean;
+}
+
 export interface Team {
   id: string;
   name: string;
-  players: Player[];
+  players: DrawPlayer[];
+  targetSize: number;
+  vacancyCount: number;
   totalSkill: number;
   averageSkill: number;
   unknownCount: number;
@@ -30,6 +39,7 @@ export interface BalanceSummary {
   averageRange: number;
   unknownRange: number;
   playerCountRange: number;
+  vacancyRange: number;
   historyPenalty: number;
   score: number;
 }
@@ -38,7 +48,7 @@ export interface DrawResult {
   id: string;
   createdAt: string;
   teams: Team[];
-  substitutes: Player[];
+  substitutes: DrawPlayer[];
   balance: BalanceSummary;
   observation: string;
   copiedText: string;

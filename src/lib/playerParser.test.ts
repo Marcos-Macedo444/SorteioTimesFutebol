@@ -75,5 +75,6 @@ Suplentes:
     expect(cleanPlayerName("e faixa Marquin")).toBe("Marquin");
     expect(cleanPlayerName("confirmado João Victor")).toBe("João Victor");
     expect(cleanPlayerName("pago JG")).toBe("JG");
+    expect(cleanPlayerName("presença Luiz Fernando")).toBe("Luiz Fernando");
   });
 });

@@ -1,6 +1,29 @@
 # Sorteador de Times da Pelada
 
-Aplicação web front-end only para organizar sorteios de times de futebol de pelada. O sistema extrai nomes de uma mensagem completa, permite definir habilidade por estrelas, trata jogadores marcados como "Não conheço", sorteia times equilibrados e usa histórico local para reduzir repetições entre peladas.
+Site front-end only para sortear times de futebol/pelada de forma prática. O usuário cola a mensagem completa da pelada, o sistema extrai apenas os nomes, permite definir estrelas, sorteia times equilibrados, copia o resultado para WhatsApp, exporta em PDF e também gera uma nova mensagem completa substituindo a lista original pelos times sorteados.
+
+## Criador
+
+Criado por Marcos Macêdo  
+Site: https://marcosmacedo.dev/
+
+© 2026 Marcos Macêdo. Todos os direitos reservados.
+
+## Funcionalidades
+
+- Extração inteligente de nomes em listas numeradas.
+- Edição, adição e remoção manual de jogadores.
+- Habilidades por estrelas de 1 a 5.
+- Opção "Não conheço" com estrela interna sorteada a cada sorteio.
+- Sorteio balanceado por força, média, fortes, fracos, desconhecidos e histórico.
+- Vagas sobrando quando faltam jogadores para a configuração escolhida.
+- Suplentes quando há mais jogadores que vagas no primeiro sorteio.
+- Histórico local dos últimos 20 sorteios para reduzir repetição de pares.
+- Copiar resultado pronto para WhatsApp.
+- Copiar mensagem completa da pelada com a lista original substituída pelos times.
+- Exportar PDF via janela de impressão.
+- Importar e exportar jogadores em JSON.
+- Persistência local com `localStorage`.
 
 ## Tecnologias
 
@@ -11,7 +34,7 @@ Aplicação web front-end only para organizar sorteios de times de futebol de pe
 - ESLint
 - localStorage
 
-Não há backend, banco de dados ou login obrigatório.
+Não há backend, banco de dados ou login.
 
 ## Como rodar localmente
 
@@ -22,13 +45,13 @@ npm run dev
 
 Abra a URL exibida pelo Vite, normalmente `http://localhost:5173`.
 
-## Build de produção
+## Build
 
 ```bash
 npm run build
 ```
 
-Os arquivos finais ficam em `dist`.
+Os arquivos finais são gerados em `dist`.
 
 ## Testes e lint
 
@@ -37,22 +60,39 @@ npm run test
 npm run lint
 ```
 
-Os testes cobrem o parser de nomes, linhas vazias, prefixos irrelevantes, nomes repetidos, balanceamento básico e distribuição de jogadores desconhecidos.
+Os testes cobrem parser, linhas vazias, prefixos irrelevantes, nomes repetidos, desconhecidos com estrelas sorteadas, vagas sobrando, suplentes, WhatsApp, substituição da lista original e créditos do criador.
+
+## Deploy grátis no Render
+
+Crie um Static Site no Render apontando para este repositório.
+
+- Build command: `npm install && npm run build`
+- Publish directory: `dist`
+
+O arquivo `render.yaml` também documenta a configuração:
+
+```yaml
+services:
+  - type: web
+    name: sorteio-times-futebol
+    env: static
+    buildCommand: npm install && npm run build
+    staticPublishPath: dist
+```
 
 ## Como usar
 
-1. Cole a mensagem completa da pelada no campo de entrada.
+1. Cole a mensagem completa da pelada.
 2. Clique em `Extrair nomes`.
-3. Revise os jogadores extraídos, edite nomes se precisar e defina a habilidade.
-4. Configure quantidade de times, jogadores por time e nomes dos times.
+3. Revise os jogadores e defina estrelas ou `Não conheço`.
+4. Configure quantidade de times e jogadores por time.
 5. Clique em `Sortear times`.
-6. Use `Copiar resultado` para mandar o texto no WhatsApp.
+6. Copie somente o resultado ou a mensagem completa com os times.
+7. Exporte o PDF se quiser compartilhar ou arquivar.
 
-Também é possível importar e exportar jogadores com estrelas em JSON.
+## Parser de nomes
 
-## Extração de nomes
-
-O parser detecta linhas que começam com número seguido de nome, aceitando formatos como:
+O parser detecta linhas que começam com número seguido de nome:
 
 - `1 Theo`
 - `1  Theo`
@@ -60,60 +100,81 @@ O parser detecta linhas que começam com número seguido de nome, aceitando form
 - `1. Theo`
 - `1) Theo`
 
-Linhas numeradas vazias são ignoradas. O sistema preserva nomes compostos, normaliza espaços, capitaliza nomes de forma amigável e mantém abreviações como `JG`. Prefixos comuns antes do nome, como `e faixa`, `faixa`, `confirmado`, `pago` e `ok`, são removidos.
+Ele ignora Pix, valor, data, local, horários, regras, emojis, títulos e linhas numeradas vazias como `22`, `23` e `24`. Também normaliza espaços, preserva nomes compostos, mantém abreviações como `JG` e remove prefixos comuns antes do nome, como `e faixa`, `faixa`, `confirmado`, `pago`, `ok` e `presença`.
 
-Se houver nomes repetidos, o app mantém todos os jogadores e diferencia a partir do segundo, por exemplo `Matheus` e `Matheus #2`.
+Nomes repetidos são mantidos como jogadores separados, por exemplo `Matheus` e `Matheus #2`.
 
-## Como funciona o sorteio
+## Regra do "Não conheço"
 
-Cada habilidade recebe um peso:
+Jogadores marcados como `Não conheço` não ficam com 3 estrelas fixas. Em cada sorteio, o algoritmo atribui internamente uma estrela entre 1 e 5, considerando:
 
-- 1 estrela = 1
-- 2 estrelas = 2
-- 3 estrelas = 3
-- 4 estrelas = 4
-- 5 estrelas = 5
-- Não conheço = peso provisório 3
+- média dos jogadores conhecidos;
+- quantidade de jogadores fortes;
+- quantidade de jogadores fracos;
+- quantidade de desconhecidos;
+- quantidade de times.
 
-O algoritmo gera várias tentativas, embaralha os jogadores, distribui priorizando o time mais fraco no momento e calcula uma pontuação de equilíbrio. A melhor tentativa é escolhida.
+Esse valor vale apenas para o sorteio atual. Ao sortear novamente, outro valor interno pode ser usado. Na tela, no WhatsApp e no PDF, o jogador continua aparecendo como `Não conheço`, mas com a estrela aplicada de forma discreta para transparência.
 
-A pontuação considera:
+Exemplo:
 
-- diferença de soma de estrelas;
-- diferença de média;
-- diferença de quantidade de jogadores;
-- distribuição de jogadores fortes e fracos;
-- distribuição de jogadores marcados como "Não conheço";
-- penalidade para pares que já caíram juntos no histórico recente.
+```text
+* JG — Não conheço ⭐⭐⭐
+```
 
-## Tratamento de "Não conheço"
+## Vagas sobrando
 
-Jogadores desconhecidos usam peso provisório 3 para não quebrar o cálculo, mas continuam aparecendo como "Não conheço" na interface e no texto copiado. O algoritmo aplica penalidade quando um time já tem desconhecidos, espalhando esses jogadores entre os times sempre que possível.
+Se a configuração pedir mais vagas do que jogadores disponíveis, o sorteio acontece mesmo assim. As vagas vazias aparecem como `Vaga Sobrando`:
+
+```text
+* Carlos ⭐⭐⭐
+* João ⭐⭐
+* *Vaga Sobrando*
+```
+
+Essas vagas aparecem na tela, no texto copiado para WhatsApp e no PDF.
+
+## Suplentes
+
+Se houver mais jogadores do que vagas configuradas, o sistema sorteia o primeiro grupo e coloca os excedentes em `Suplentes`. Eles aparecem na tela, no WhatsApp e no PDF.
+
+## Mensagem completa com times
+
+Além de copiar somente o resultado, o app consegue gerar uma mensagem completa baseada no texto original. Ele mantém valor, Pix, data, horário, local, avisos e regras, remove a lista numerada antiga e insere `⚽ TIMES SORTEADOS` no lugar.
+
+Exemplo de entrada:
+
+```text
+VALOR: IREMOS DEFINIR
+
+LISTA ABERTA
+
+1 Theo
+2 Jayme
+
+⚠️ Regras do FUT
+* Jogo acaba com 2 gols
+```
+
+Exemplo de saída:
+
+```text
+VALOR: IREMOS DEFINIR
+
+⚽ TIMES SORTEADOS
+
+Time 1
+* Theo ⭐⭐⭐
+
+Time 2
+* Jayme ⭐⭐⭐
+
+⚠️ Regras do FUT
+* Jogo acaba com 2 gols
+```
 
 ## Histórico local
 
-O app salva os últimos 20 sorteios no `localStorage`, incluindo data, times e pares de jogadores que caíram juntos. Em novos sorteios, esses pares recebem uma penalidade leve para reduzir a chance de repetir os mesmos grupos.
+O app salva os últimos 20 sorteios no navegador, incluindo times e pares de jogadores que caíram juntos. Em novos sorteios, esses pares recebem penalidade leve para reduzir repetição, sem travar o equilíbrio.
 
-O histórico é apenas uma ajuda, não uma trava absoluta. O equilíbrio das estrelas continua sendo prioridade.
-
-## Persistência
-
-São salvos no navegador:
-
-- texto colado;
-- jogadores e habilidades;
-- configurações do sorteio;
-- histórico dos últimos sorteios.
-
-Limitação: por ser front-end only, esses dados ficam apenas no navegador/dispositivo usado. Se limpar os dados do site ou abrir em outro navegador, o histórico não será compartilhado.
-
-## Deploy gratuito no Render
-
-Crie um novo Static Site no Render apontando para este repositório.
-
-Configuração:
-
-- Build command: `npm install && npm run build`
-- Publish directory: `dist`
-
-O arquivo `render.yaml` já deixa essa configuração documentada para deploy como site estático.
+Limitação: por ser front-end only, os dados ficam apenas no navegador usado. Outro dispositivo ou navegador não compartilha o histórico.

@@ -1,7 +1,9 @@
 import type {
+  AppliedSkill,
   BalanceSummary,
   DrawConfig,
   DrawHistoryEntry,
+  DrawPlayer,
   DrawResult,
   Player,
   SkillRating,
@@ -13,13 +15,13 @@ import { normalizeNameKey } from "./playerParser";
 interface WorkingTeam {
   id: string;
   name: string;
-  players: Player[];
+  players: DrawPlayer[];
   targetSize: number;
 }
 
 interface Candidate {
   teams: Team[];
-  substitutes: Player[];
+  substitutes: DrawPlayer[];
   balance: BalanceSummary;
 }
 
@@ -28,7 +30,7 @@ export const DEFAULT_DRAW_CONFIG: DrawConfig = {
   playersPerTeam: 5,
   drawAllPlayers: false,
   teamNames: ["Time 1", "Time 2", "Time 3", "Time 4"],
-  attempts: 800
+  attempts: 900
 };
 
 export function drawTeams(
@@ -80,8 +82,8 @@ export function drawTeams(
   };
 }
 
-export function skillWeight(skill: SkillRating): number {
-  return skill === "unknown" ? 3 : skill;
+export function skillWeight(skill: SkillRating, appliedSkill?: AppliedSkill): number {
+  return skill === "unknown" ? appliedSkill ?? 3 : skill;
 }
 
 export function createHistoryEntry(result: DrawResult): DrawHistoryEntry {
@@ -126,8 +128,8 @@ function buildCandidate(
   const activeCount = config.drawAllPlayers
     ? players.length
     : Math.min(players.length, config.teamCount * config.playersPerTeam);
-  const activePlayers = shuffledPlayers.slice(0, activeCount);
-  const substitutes = shuffledPlayers.slice(activeCount);
+  const activePlayers = applyDrawSkills(shuffledPlayers.slice(0, activeCount), random);
+  const substitutes = applyDrawSkills(shuffledPlayers.slice(activeCount), random);
   const targetSizes = getTargetSizes(activePlayers.length, config);
   const teams = createWorkingTeams(config, targetSizes);
   const orderedPlayers = orderPlayersForDistribution(activePlayers, random);
@@ -159,14 +161,6 @@ function validateDrawInput(players: Player[], config: DrawConfig): void {
   if (config.playersPerTeam < 1) {
     throw new Error("A quantidade de jogadores por time deve ser maior que zero.");
   }
-
-  if (!config.drawAllPlayers && players.length < config.teamCount * config.playersPerTeam) {
-    throw new Error("Não há jogadores suficientes para preencher todos os times com essa configuração.");
-  }
-
-  if (players.length < config.teamCount) {
-    throw new Error("Adicione jogadores suficientes para distribuir entre os times.");
-  }
 }
 
 function getTargetSizes(activeCount: number, config: DrawConfig): number[] {
@@ -189,25 +183,129 @@ function createWorkingTeams(config: DrawConfig, targetSizes: number[]): WorkingT
   }));
 }
 
-function orderPlayersForDistribution(players: Player[], random: () => number): Player[] {
+function applyDrawSkills(players: Player[], random: () => number): DrawPlayer[] {
+  const knownPlayers = players.filter((player) => player.skill !== "unknown");
+  const knownAverage =
+    knownPlayers.length > 0
+      ? knownPlayers.reduce((sum, player) => sum + skillWeight(player.skill), 0) / knownPlayers.length
+      : 3;
+  const strongRatio = knownPlayers.filter((player) => skillWeight(player.skill) >= 4).length / Math.max(1, knownPlayers.length);
+  const weakRatio = knownPlayers.filter((player) => skillWeight(player.skill) <= 2).length / Math.max(1, knownPlayers.length);
+  const unknownRatingCounts = new Map<AppliedSkill, number>();
+
+  return players.map((player) => {
+    if (player.skill !== "unknown") {
+      return {
+        ...player,
+        appliedSkill: player.skill,
+        wasUnknown: false
+      };
+    }
+
+    const appliedSkill = chooseUnknownSkill({
+      knownAverage,
+      strongRatio,
+      weakRatio,
+      unknownRatingCounts,
+      random
+    });
+
+    unknownRatingCounts.set(appliedSkill, (unknownRatingCounts.get(appliedSkill) ?? 0) + 1);
+
+    return {
+      ...player,
+      appliedSkill,
+      wasUnknown: true
+    };
+  });
+}
+
+function chooseUnknownSkill({
+  knownAverage,
+  strongRatio,
+  weakRatio,
+  unknownRatingCounts,
+  random
+}: {
+  knownAverage: number;
+  strongRatio: number;
+  weakRatio: number;
+  unknownRatingCounts: Map<AppliedSkill, number>;
+  random: () => number;
+}): AppliedSkill {
+  const ratings: AppliedSkill[] = [1, 2, 3, 4, 5];
+
+  return ratings.reduce((bestRating, rating) => {
+    const distanceFromKnownAverage = Math.abs(rating - knownAverage);
+    let score = 2.2 - distanceFromKnownAverage * 0.55;
+
+    if (strongRatio > 0.4 && rating >= 4) {
+      score -= 0.5 + strongRatio * 0.5;
+    }
+
+    if (weakRatio > 0.4 && rating <= 2) {
+      score -= 0.5 + weakRatio * 0.5;
+    }
+
+    if (rating === 1 || rating === 5) {
+      score -= 0.25;
+    }
+
+    score -= (unknownRatingCounts.get(rating) ?? 0) * 0.65;
+    score += random() * 0.8;
+
+    const bestScore = getUnknownSkillScore(bestRating, knownAverage, strongRatio, weakRatio, unknownRatingCounts);
+    return score > bestScore ? rating : bestRating;
+  }, 3 as AppliedSkill);
+}
+
+function getUnknownSkillScore(
+  rating: AppliedSkill,
+  knownAverage: number,
+  strongRatio: number,
+  weakRatio: number,
+  unknownRatingCounts: Map<AppliedSkill, number>
+): number {
+  let score = 2.2 - Math.abs(rating - knownAverage) * 0.55;
+
+  if (strongRatio > 0.4 && rating >= 4) {
+    score -= 0.5 + strongRatio * 0.5;
+  }
+
+  if (weakRatio > 0.4 && rating <= 2) {
+    score -= 0.5 + weakRatio * 0.5;
+  }
+
+  if (rating === 1 || rating === 5) {
+    score -= 0.25;
+  }
+
+  return score - (unknownRatingCounts.get(rating) ?? 0) * 0.65;
+}
+
+function orderPlayersForDistribution(players: DrawPlayer[], random: () => number): DrawPlayer[] {
   return players
     .map((player) => ({
       player,
-      score: skillWeight(player.skill) * 100 + (player.skill === "unknown" ? 12 : 0) + random() * 25
+      score: player.appliedSkill * 100 + (player.wasUnknown ? 12 : 0) + random() * 25
     }))
     .sort((first, second) => second.score - first.score)
     .map((item) => item.player);
 }
 
 function pickBestTeamForPlayer(
-  player: Player,
+  player: DrawPlayer,
   teams: WorkingTeam[],
   pairPenalties: Map<string, number>,
   random: () => number
 ): WorkingTeam {
   let availableTeams = teams.filter((team) => team.players.length < team.targetSize);
 
-  if (player.skill === "unknown") {
+  if (availableTeams.length === 0) {
+    availableTeams = teams;
+  }
+
+  if (player.wasUnknown) {
     const lowestUnknownCount = Math.min(...availableTeams.map((team) => countUnknown(team.players)));
     availableTeams = availableTeams.filter((team) => countUnknown(team.players) === lowestUnknownCount);
   }
@@ -220,15 +318,15 @@ function pickBestTeamForPlayer(
 }
 
 function scorePlacement(
-  player: Player,
+  player: DrawPlayer,
   team: WorkingTeam,
   pairPenalties: Map<string, number>,
   random: () => number
 ): number {
-  const currentTotal = team.players.reduce((sum, teammate) => sum + skillWeight(teammate.skill), 0);
-  const unknownPenalty = player.skill === "unknown" ? countUnknown(team.players) * 7 : 0;
-  const strongPenalty = skillWeight(player.skill) >= 4 ? countStrong(team.players) * 2 : 0;
-  const weakPenalty = skillWeight(player.skill) <= 2 ? countWeak(team.players) * 2 : 0;
+  const currentTotal = team.players.reduce((sum, teammate) => sum + teammate.appliedSkill, 0);
+  const unknownPenalty = player.wasUnknown ? countUnknown(team.players) * 7 : 0;
+  const strongPenalty = player.appliedSkill >= 4 ? countStrong(team.players) * 2 : 0;
+  const weakPenalty = player.appliedSkill <= 2 ? countWeak(team.players) * 2 : 0;
   const historyPenalty = team.players.reduce(
     (sum, teammate) => sum + (pairPenalties.get(createPairKey(player.name, teammate.name)) ?? 0),
     0
@@ -246,13 +344,15 @@ function scorePlacement(
 }
 
 function toTeam(team: WorkingTeam): Team {
-  const totalSkill = team.players.reduce((sum, player) => sum + skillWeight(player.skill), 0);
+  const totalSkill = team.players.reduce((sum, player) => sum + player.appliedSkill, 0);
   const playerCount = team.players.length;
 
   return {
     id: team.id,
     name: team.name,
     players: team.players,
+    targetSize: team.targetSize,
+    vacancyCount: Math.max(0, team.targetSize - playerCount),
     totalSkill,
     averageSkill: playerCount > 0 ? totalSkill / playerCount : 0,
     unknownCount: countUnknown(team.players),
@@ -266,6 +366,7 @@ function scoreTeams(teams: Team[], pairPenalties: Map<string, number>): BalanceS
   const averages = teams.map((team) => team.averageSkill);
   const unknowns = teams.map((team) => team.unknownCount);
   const counts = teams.map((team) => team.players.length);
+  const vacancies = teams.map((team) => team.vacancyCount);
   const strongCounts = teams.map((team) => team.strongCount);
   const weakCounts = teams.map((team) => team.weakCount);
   const historyPenalty = teams.reduce(
@@ -281,6 +382,7 @@ function scoreTeams(teams: Team[], pairPenalties: Map<string, number>): BalanceS
   const averageRange = range(averages);
   const unknownRange = range(unknowns);
   const playerCountRange = range(counts);
+  const vacancyRange = range(vacancies);
   const strongRange = range(strongCounts);
   const weakRange = range(weakCounts);
   const score =
@@ -288,6 +390,7 @@ function scoreTeams(teams: Team[], pairPenalties: Map<string, number>): BalanceS
     averageRange * 10 +
     unknownRange * 8 +
     playerCountRange * 18 +
+    vacancyRange * 10 +
     strongRange * 5 +
     weakRange * 4 +
     historyPenalty * 3;
@@ -297,6 +400,7 @@ function scoreTeams(teams: Team[], pairPenalties: Map<string, number>): BalanceS
     averageRange,
     unknownRange,
     playerCountRange,
+    vacancyRange,
     historyPenalty,
     score
   };
@@ -319,31 +423,33 @@ function buildPairPenaltyMap(history: DrawHistoryEntry[]): Map<string, number> {
 function createObservation(balance: BalanceSummary, players: Player[]): string {
   const unknownRatio = players.filter((player) => player.skill === "unknown").length / players.length;
 
-  if (balance.totalRange <= 2 && balance.unknownRange <= 1) {
+  if (balance.totalRange <= 1 && balance.unknownRange <= 1 && balance.vacancyRange <= 1) {
+    return "Sorteio muito equilibrado.";
+  }
+
+  if (balance.totalRange <= 3 && balance.unknownRange <= 1) {
     return unknownRatio >= 0.35
-      ? "Sorteio bom, mas há muitos jogadores desconhecidos."
+      ? "Sorteio equilibrado, com atenção aos jogadores desconhecidos."
       : "Sorteio equilibrado.";
   }
 
-  if (balance.totalRange <= 4) {
-    return unknownRatio >= 0.35
-      ? "Sorteio razoável, com atenção aos jogadores desconhecidos."
-      : "Sorteio bom, com pequena diferença de força.";
+  if (balance.totalRange <= 5) {
+    return "Sorteio aceitável.";
   }
 
-  return "Atenção: diferença de força alta.";
+  return "Atenção: diferença alta entre os times.";
 }
 
-function countUnknown(players: Player[]): number {
-  return players.filter((player) => player.skill === "unknown").length;
+function countUnknown(players: DrawPlayer[]): number {
+  return players.filter((player) => player.wasUnknown).length;
 }
 
-function countStrong(players: Player[]): number {
-  return players.filter((player) => skillWeight(player.skill) >= 4).length;
+function countStrong(players: DrawPlayer[]): number {
+  return players.filter((player) => player.appliedSkill >= 4).length;
 }
 
-function countWeak(players: Player[]): number {
-  return players.filter((player) => skillWeight(player.skill) <= 2).length;
+function countWeak(players: DrawPlayer[]): number {
+  return players.filter((player) => player.appliedSkill <= 2).length;
 }
 
 function range(values: number[]): number {

@@ -171,6 +171,12 @@ h3 {
   outline: none;
 }
 
+.helper-text {
+  color: var(--text-muted);
+  font-size: 0.93rem;
+  margin: -4px 0 12px;
+}
+
 .raw-input:focus,
 input:focus,
 select:focus {
@@ -187,6 +193,11 @@ select:focus {
 
 .button-row:not(.section-heading .button-row) {
   margin-top: 12px;
+}
+
+.result-actions {
+  justify-content: flex-end;
+  margin-top: 0;
 }
 
 .primary-button,
@@ -441,6 +452,15 @@ label {
   min-height: 30px;
 }
 
+.team-card li.vacancy-line {
+  justify-content: center;
+  border: 1px dashed #c3d1bd;
+  border-radius: 8px;
+  color: #56655a;
+  background: #f4f7f1;
+  margin-top: 4px;
+}
+
 .star-badge,
 .unknown-badge {
   flex: 0 0 auto;
@@ -498,6 +518,27 @@ label {
   border-radius: 8px;
   padding: 7px 9px;
   background: #ffffff;
+}
+
+.site-footer {
+  display: grid;
+  gap: 6px;
+  justify-items: center;
+  margin-top: 22px;
+  padding: 18px 12px 4px;
+  color: var(--text-muted);
+  font-size: 0.92rem;
+  text-align: center;
+}
+
+.site-footer a {
+  color: var(--green-dark);
+  font-weight: 800;
+  text-decoration: none;
+}
+
+.site-footer a:hover {
+  text-decoration: underline;
 }
 
 .visually-hidden {

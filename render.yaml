@@ -1,7 +1,7 @@
 services:
   - type: web
-    name: sorteio-times-pelada
-    runtime: static
+    name: sorteio-times-futebol
+    env: static
     buildCommand: npm install && npm run build
     staticPublishPath: dist
     pullRequestPreviewsEnabled: true

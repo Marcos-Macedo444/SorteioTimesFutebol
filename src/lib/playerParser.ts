@@ -1,7 +1,7 @@
 const IRRELEVANT_PREFIXES = [
   /^(?:e\s+)?faixa\s+/iu,
   /^(?:confirmad[oa]|confirmou|confirmado|confirmada|confirm)\s+/iu,
-  /^(?:pago|paga|pg|ok|feito|fechou)\s+/iu
+  /^(?:pago|paga|pg|ok|feito|fechou|presen[çc]a)\s+/iu
 ];
 
 const LOWERCASE_PARTICLES = new Set(["da", "de", "di", "do", "das", "dos", "e"]);
@@ -25,6 +25,10 @@ export function extractNameFromLine(line: string): string | null {
 
   const cleaned = cleanPlayerName(match[1]);
   return cleaned.length > 0 ? cleaned : null;
+}
+
+export function isNumberedListLine(line: string): boolean {
+  return /^\s*\d{1,3}(?:\s*$|\s+.+$|\s*[-.)]\s*.*$)/u.test(line);
 }
 
 export function cleanPlayerName(rawName: string): string {

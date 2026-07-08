@@ -1,6 +1,8 @@
 import {
   Clipboard,
   Download,
+  FileText,
+  Printer,
   RefreshCw,
   Shuffle,
   Sparkles,
@@ -13,6 +15,8 @@ import { ChangeEvent, useEffect, useMemo, useRef, useState } from "react";
 import type { DrawConfig, DrawResult, Player, SkillRating } from "./types";
 import { createHistoryEntry, DEFAULT_DRAW_CONFIG, drawTeams } from "./lib/drawAlgorithm";
 import { formatSkillLabel } from "./lib/formatResult";
+import { generateFullMessageWithDraw } from "./lib/originalMessage";
+import { exportDrawAsPdf } from "./lib/pdfExport";
 import { normalizeNameKey, parsePlayerNames } from "./lib/playerParser";
 import {
   clearAppState,
@@ -40,6 +44,7 @@ function App() {
   const [result, setResult] = useState<DrawResult | null>(null);
   const [statusMessage, setStatusMessage] = useState("Pronto para sortear.");
   const [copyState, setCopyState] = useState<"idle" | "copied" | "error">("idle");
+  const [fullMessageCopyState, setFullMessageCopyState] = useState<"idle" | "copied" | "error">("idle");
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
@@ -49,6 +54,7 @@ function App() {
   const validPlayers = players.filter((player) => player.name.trim().length > 0);
   const activeCapacity = config.drawAllPlayers ? validPlayers.length : config.teamCount * config.playersPerTeam;
   const estimatedSubstitutes = Math.max(0, validPlayers.length - activeCapacity);
+  const estimatedVacancies = config.drawAllPlayers ? 0 : Math.max(0, activeCapacity - validPlayers.length);
 
   function handleExtractNames() {
     const names = parsePlayerNames(rawText);
@@ -119,6 +125,7 @@ function App() {
       setResult(nextResult);
       setHistory((currentHistory) => [createHistoryEntry(nextResult), ...currentHistory].slice(0, 20));
       setCopyState("idle");
+      setFullMessageCopyState("idle");
       setStatusMessage("Sorteio gerado com equilíbrio.");
     } catch (error) {
       setStatusMessage(error instanceof Error ? error.message : "Não foi possível sortear.");
@@ -131,16 +138,40 @@ function App() {
     }
 
     try {
-      if (navigator.clipboard?.writeText) {
-        await navigator.clipboard.writeText(result.copiedText);
-      } else {
-        fallbackCopy(result.copiedText);
-      }
+      await copyText(result.copiedText);
       setCopyState("copied");
       setStatusMessage("Resultado copiado para WhatsApp.");
     } catch {
       setCopyState("error");
       setStatusMessage("Não foi possível copiar automaticamente.");
+    }
+  }
+
+  async function handleCopyFullMessage() {
+    if (!result) {
+      return;
+    }
+
+    try {
+      await copyText(generateFullMessageWithDraw(rawText, result));
+      setFullMessageCopyState("copied");
+      setStatusMessage("Mensagem completa copiada com os times sorteados.");
+    } catch {
+      setFullMessageCopyState("error");
+      setStatusMessage("Não foi possível copiar a mensagem completa automaticamente.");
+    }
+  }
+
+  function handleExportPdf() {
+    if (!result) {
+      return;
+    }
+
+    try {
+      exportDrawAsPdf(result);
+      setStatusMessage("PDF aberto na janela de impressão.");
+    } catch (error) {
+      setStatusMessage(error instanceof Error ? error.message : "Não foi possível exportar o PDF.");
     }
   }
 
@@ -181,7 +212,8 @@ function App() {
     setHistory([]);
     setResult(null);
     setCopyState("idle");
-    setStatusMessage("Tudo limpo.");
+    setFullMessageCopyState("idle");
+    setStatusMessage("Dados salvos limpos.");
   }
 
   function handleClearHistory() {
@@ -196,7 +228,7 @@ function App() {
           <img className="brand-mark" src="/field-mark.svg" alt="" aria-hidden="true" />
           <div>
             <h1>Sorteador de Times da Pelada</h1>
-            <p>Times equilibrados por estrelas, desconhecidos e histórico local.</p>
+            <p>Extrai só os nomes, ignora o resto da mensagem e monta times equilibrados.</p>
           </div>
         </div>
         <div className="summary-strip" aria-label="Resumo atual">
@@ -216,10 +248,13 @@ function App() {
               <div className="button-row">
                 <button className="secondary-button" type="button" onClick={handleClearAll}>
                   <Trash2 aria-hidden="true" size={18} />
-                  Limpar tudo
+                  Limpar dados salvos
                 </button>
               </div>
             </div>
+            <p className="helper-text">
+              Cole a mensagem inteira da pelada. O sistema separa somente as linhas numeradas com jogadores.
+            </p>
             <textarea
               className="raw-input"
               value={rawText}
@@ -375,6 +410,7 @@ function App() {
                 ? `${validPlayers.length} jogadores serão distribuídos.`
                 : `${Math.min(activeCapacity, validPlayers.length)} jogadores entram no primeiro sorteio.`}
               {estimatedSubstitutes > 0 ? ` ${estimatedSubstitutes} ficam como suplentes.` : ""}
+              {estimatedVacancies > 0 ? ` ${estimatedVacancies} vagas aparecerão como Vaga Sobrando.` : ""}
             </div>
 
             <div className="button-stack">
@@ -399,7 +435,7 @@ function App() {
                 <Trash2 aria-hidden="true" size={18} />
               </button>
             </div>
-            <p className="history-warning">O histórico é salvo apenas neste navegador.</p>
+            <p className="history-warning">O histórico fica salvo apenas neste navegador.</p>
             <div className="history-list">
               {history.length === 0 ? (
                 <span>Nenhum sorteio salvo.</span>
@@ -433,10 +469,20 @@ function App() {
               <span className="eyebrow">Resultado</span>
               <h2>Times sorteados</h2>
             </div>
-            <button className="primary-button" type="button" onClick={handleCopyResult}>
-              <Clipboard aria-hidden="true" size={18} />
-              {copyState === "copied" ? "Copiado" : "Copiar resultado"}
-            </button>
+            <div className="button-row result-actions">
+              <button className="primary-button" type="button" onClick={handleCopyResult}>
+                <Clipboard aria-hidden="true" size={18} />
+                {copyState === "copied" ? "Resultado copiado" : "Copiar resultado"}
+              </button>
+              <button className="secondary-button" type="button" onClick={handleCopyFullMessage}>
+                <FileText aria-hidden="true" size={18} />
+                {fullMessageCopyState === "copied" ? "Mensagem copiada" : "Copiar mensagem completa"}
+              </button>
+              <button className="secondary-button" type="button" onClick={handleExportPdf}>
+                <Printer aria-hidden="true" size={18} />
+                Exportar PDF
+              </button>
+            </div>
           </div>
 
           <div className="balance-line">
@@ -444,6 +490,9 @@ function App() {
             <span>Diferença total: {result.balance.totalRange.toFixed(0)} estrelas</span>
             <span>Diferença de média: {result.balance.averageRange.toFixed(1)}</span>
             <span>Desconhecidos: variação de {result.balance.unknownRange}</span>
+            <span>Jogadores: {result.teams.reduce((sum, team) => sum + team.players.length, 0)}</span>
+            <span>Vagas sobrando: {result.teams.reduce((sum, team) => sum + team.vacancyCount, 0)}</span>
+            <span>Suplentes: {result.substitutes.length}</span>
           </div>
 
           <div className="team-grid">
@@ -451,15 +500,22 @@ function App() {
               <article className="team-card" key={team.id}>
                 <div className="team-card-header">
                   <h3>{team.name}</h3>
-                  <span>{team.players.length} jogadores</span>
+                  <span>
+                    {team.players.length}/{team.targetSize} jogadores
+                  </span>
                 </div>
                 <ul>
                   {team.players.map((player) => (
                     <li key={player.id}>
                       <span>{player.name}</span>
-                      <span className={player.skill === "unknown" ? "unknown-badge" : "star-badge"}>
-                        {formatSkillLabel(player.skill)}
+                      <span className={player.wasUnknown ? "unknown-badge" : "star-badge"}>
+                        {formatSkillLabel(player.skill, player.appliedSkill)}
                       </span>
+                    </li>
+                  ))}
+                  {Array.from({ length: team.vacancyCount }, (_, index) => (
+                    <li className="vacancy-line" key={`${team.id}-vacancy-${index}`}>
+                      <strong>Vaga Sobrando</strong>
                     </li>
                   ))}
                 </ul>
@@ -477,13 +533,25 @@ function App() {
               <h3>Suplentes</h3>
               <div>
                 {result.substitutes.map((player) => (
-                  <span key={player.id}>{player.name}</span>
+                  <span key={player.id}>
+                    {player.name} · {formatSkillLabel(player.skill, player.appliedSkill)}
+                  </span>
                 ))}
               </div>
             </div>
           ) : null}
         </section>
       ) : null}
+
+      <footer className="site-footer">
+        <div>
+          Criado por Marcos Macêdo ·{" "}
+          <a href="https://marcosmacedo.dev/" target="_blank" rel="noopener noreferrer">
+            Conheça o criador
+          </a>
+        </div>
+        <div>© 2026 Marcos Macêdo. Todos os direitos reservados.</div>
+      </footer>
     </div>
   );
 }
@@ -505,6 +573,15 @@ function clampNumber(value: number, min: number, max: number): number {
   }
 
   return Math.min(max, Math.max(min, Math.round(value)));
+}
+
+async function copyText(text: string): Promise<void> {
+  if (navigator.clipboard?.writeText) {
+    await navigator.clipboard.writeText(text);
+    return;
+  }
+
+  fallbackCopy(text);
 }
 
 function fallbackCopy(text: string): void {
