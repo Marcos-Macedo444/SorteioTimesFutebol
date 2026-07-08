@@ -120,7 +120,7 @@ function sanitizeConfig(rawConfig: unknown): DrawConfig {
 
   const maybeConfig = rawConfig as Partial<DrawConfig>;
   const teamCount = clampNumber(maybeConfig.teamCount, 2, 10, base.teamCount);
-  const playersPerTeam = clampNumber(maybeConfig.playersPerTeam, 1, 15, base.playersPerTeam);
+  const playersPerTeam = clampNumber(maybeConfig.playersPerTeam, 1, 30, base.playersPerTeam);
   const teamNames = Array.from({ length: teamCount }, (_, index) => {
     const name = maybeConfig.teamNames?.[index];
     return typeof name === "string" && name.trim() ? name.trim() : `Time ${index + 1}`;

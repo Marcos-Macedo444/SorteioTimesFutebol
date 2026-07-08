@@ -1,8 +1,8 @@
 import type { AppliedSkill, DrawPlayer, DrawResult, SkillRating } from "../types";
 
-export function formatSkillLabel(skill: SkillRating, appliedSkill?: AppliedSkill): string {
+export function formatSkillLabel(skill: SkillRating): string {
   if (skill === "unknown") {
-    return `Não conheço · sorteado como ${formatStars(appliedSkill ?? 3, "plain")}`;
+    return "Não conheço · peso médio";
   }
 
   return formatStars(skill, "plain");
@@ -63,7 +63,7 @@ export function formatTeamPlayerLinesForWhatsApp(players: DrawPlayer[], vacancyC
 
 export function formatPlayerForWhatsApp(player: DrawPlayer): string {
   if (player.wasUnknown) {
-    return `${player.name} — Não conheço ${formatStars(player.appliedSkill, "whatsapp")}`;
+    return `${player.name} — Não conheço`;
   }
 
   return `${player.name} ${formatStars(player.appliedSkill, "whatsapp")}`;

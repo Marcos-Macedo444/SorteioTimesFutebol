@@ -143,7 +143,7 @@ function renderTeam(team: DrawResult["teams"][number]): string {
 
 function renderPlayer(player: DrawPlayer): string {
   const label = player.wasUnknown
-    ? `<span class="unknown">Não conheço ${formatStars(player.appliedSkill, "whatsapp")}</span>`
+    ? '<span class="unknown">Não conheço</span>'
     : `<span>${formatStars(player.appliedSkill, "whatsapp")}</span>`;
 
   return `<li><span>${escapeHtml(player.name)}</span>${label}</li>`;

@@ -10,4 +10,20 @@ describe("App footer credits", () => {
     expect(source).toContain("https://marcosmacedo.dev/");
     expect(source).toContain('rel="noopener noreferrer"');
   });
+
+  it("guides users to paste the full match message", () => {
+    const source = readFileSync(new URL("./App.tsx", import.meta.url), "utf8");
+
+    expect(source).toContain("Cole aqui a mensagem inteira da pelada");
+    expect(source).toContain("valor, Pix, horário, local, regras e avisos");
+    expect(source).toContain("PELADA_PLACEHOLDER");
+  });
+
+  it("references the custom favicon", () => {
+    const indexHtml = readFileSync(new URL("../index.html", import.meta.url), "utf8");
+    const favicon = readFileSync(new URL("../public/favicon.svg", import.meta.url), "utf8");
+
+    expect(indexHtml).toContain('/favicon.svg');
+    expect(favicon).toContain("<svg");
+  });
 });

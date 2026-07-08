@@ -83,7 +83,7 @@ export function drawTeams(
 }
 
 export function skillWeight(skill: SkillRating, appliedSkill?: AppliedSkill): number {
-  return skill === "unknown" ? appliedSkill ?? 3 : skill;
+  return skill === "unknown" ? 3 : appliedSkill ?? skill;
 }
 
 export function createHistoryEntry(result: DrawResult): DrawHistoryEntry {
@@ -128,8 +128,8 @@ function buildCandidate(
   const activeCount = config.drawAllPlayers
     ? players.length
     : Math.min(players.length, config.teamCount * config.playersPerTeam);
-  const activePlayers = applyDrawSkills(shuffledPlayers.slice(0, activeCount), random);
-  const substitutes = applyDrawSkills(shuffledPlayers.slice(activeCount), random);
+  const activePlayers = applyDrawSkills(shuffledPlayers.slice(0, activeCount));
+  const substitutes = applyDrawSkills(shuffledPlayers.slice(activeCount));
   const targetSizes = getTargetSizes(activePlayers.length, config);
   const teams = createWorkingTeams(config, targetSizes);
   const orderedPlayers = orderPlayersForDistribution(activePlayers, random);
@@ -183,16 +183,7 @@ function createWorkingTeams(config: DrawConfig, targetSizes: number[]): WorkingT
   }));
 }
 
-function applyDrawSkills(players: Player[], random: () => number): DrawPlayer[] {
-  const knownPlayers = players.filter((player) => player.skill !== "unknown");
-  const knownAverage =
-    knownPlayers.length > 0
-      ? knownPlayers.reduce((sum, player) => sum + skillWeight(player.skill), 0) / knownPlayers.length
-      : 3;
-  const strongRatio = knownPlayers.filter((player) => skillWeight(player.skill) >= 4).length / Math.max(1, knownPlayers.length);
-  const weakRatio = knownPlayers.filter((player) => skillWeight(player.skill) <= 2).length / Math.max(1, knownPlayers.length);
-  const unknownRatingCounts = new Map<AppliedSkill, number>();
-
+function applyDrawSkills(players: Player[]): DrawPlayer[] {
   return players.map((player) => {
     if (player.skill !== "unknown") {
       return {
@@ -202,85 +193,12 @@ function applyDrawSkills(players: Player[], random: () => number): DrawPlayer[] 
       };
     }
 
-    const appliedSkill = chooseUnknownSkill({
-      knownAverage,
-      strongRatio,
-      weakRatio,
-      unknownRatingCounts,
-      random
-    });
-
-    unknownRatingCounts.set(appliedSkill, (unknownRatingCounts.get(appliedSkill) ?? 0) + 1);
-
     return {
       ...player,
-      appliedSkill,
+      appliedSkill: 3,
       wasUnknown: true
     };
   });
-}
-
-function chooseUnknownSkill({
-  knownAverage,
-  strongRatio,
-  weakRatio,
-  unknownRatingCounts,
-  random
-}: {
-  knownAverage: number;
-  strongRatio: number;
-  weakRatio: number;
-  unknownRatingCounts: Map<AppliedSkill, number>;
-  random: () => number;
-}): AppliedSkill {
-  const ratings: AppliedSkill[] = [1, 2, 3, 4, 5];
-
-  return ratings.reduce((bestRating, rating) => {
-    const distanceFromKnownAverage = Math.abs(rating - knownAverage);
-    let score = 2.2 - distanceFromKnownAverage * 0.55;
-
-    if (strongRatio > 0.4 && rating >= 4) {
-      score -= 0.5 + strongRatio * 0.5;
-    }
-
-    if (weakRatio > 0.4 && rating <= 2) {
-      score -= 0.5 + weakRatio * 0.5;
-    }
-
-    if (rating === 1 || rating === 5) {
-      score -= 0.25;
-    }
-
-    score -= (unknownRatingCounts.get(rating) ?? 0) * 0.65;
-    score += random() * 0.8;
-
-    const bestScore = getUnknownSkillScore(bestRating, knownAverage, strongRatio, weakRatio, unknownRatingCounts);
-    return score > bestScore ? rating : bestRating;
-  }, 3 as AppliedSkill);
-}
-
-function getUnknownSkillScore(
-  rating: AppliedSkill,
-  knownAverage: number,
-  strongRatio: number,
-  weakRatio: number,
-  unknownRatingCounts: Map<AppliedSkill, number>
-): number {
-  let score = 2.2 - Math.abs(rating - knownAverage) * 0.55;
-
-  if (strongRatio > 0.4 && rating >= 4) {
-    score -= 0.5 + strongRatio * 0.5;
-  }
-
-  if (weakRatio > 0.4 && rating <= 2) {
-    score -= 0.5 + weakRatio * 0.5;
-  }
-
-  if (rating === 1 || rating === 5) {
-    score -= 0.25;
-  }
-
-  return score - (unknownRatingCounts.get(rating) ?? 0) * 0.65;
 }
 
 function orderPlayersForDistribution(players: DrawPlayer[], random: () => number): DrawPlayer[] {

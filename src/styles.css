@@ -107,8 +107,11 @@ button:disabled {
 
 .app-shell {
   width: min(1440px, 100%);
+  min-height: 100vh;
   margin: 0 auto;
   padding: 24px;
+  display: flex;
+  flex-direction: column;
 }
 
 .app-header {
@@ -169,7 +172,7 @@ h3 {
 
 .theme-toggle {
   display: inline-flex;
-  min-height: 40px;
+  min-height: 44px;
   align-items: center;
   justify-content: center;
   gap: 8px;
@@ -239,9 +242,22 @@ h3 {
   text-transform: uppercase;
 }
 
+.entry-guidance {
+  display: grid;
+  gap: 6px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface-soft);
+  color: var(--text-muted);
+  font-size: 0.95rem;
+  line-height: 1.45;
+  margin: -4px 0 12px;
+  padding: 12px;
+}
+
 .raw-input {
   width: 100%;
-  min-height: 280px;
+  min-height: 330px;
   resize: vertical;
   border: 1px solid var(--line-strong);
   border-radius: 8px;
@@ -251,10 +267,23 @@ h3 {
   outline: none;
 }
 
-.helper-text {
+.raw-input::placeholder {
+  color: var(--text-muted);
+  opacity: 0.72;
+}
+
+.helper-text,
+.input-tip {
   color: var(--text-muted);
   font-size: 0.93rem;
+}
+
+.helper-text {
   margin: -4px 0 12px;
+}
+
+.input-tip {
+  margin-top: 10px;
 }
 
 .raw-input:focus,
@@ -285,7 +314,7 @@ select:focus {
 .ghost-button,
 .icon-button {
   display: inline-flex;
-  min-height: 40px;
+  min-height: 44px;
   align-items: center;
   justify-content: center;
   gap: 8px;
@@ -357,7 +386,7 @@ select:focus {
   grid-template-columns: 38px minmax(160px, 1fr) minmax(210px, 260px) 40px;
   gap: 8px;
   align-items: center;
-  min-height: 48px;
+  min-height: 52px;
   padding: 8px;
   border: 1px solid var(--line);
   border-radius: 8px;
@@ -379,7 +408,7 @@ select:focus {
 input,
 select {
   width: 100%;
-  min-height: 40px;
+  min-height: 44px;
   border: 1px solid var(--line-strong);
   border-radius: 8px;
   background: var(--field-bg);
@@ -604,21 +633,29 @@ label {
   display: grid;
   gap: 6px;
   justify-items: center;
-  margin-top: 22px;
-  padding: 18px 12px 4px;
+  margin-top: auto;
+  padding: 28px 12px 4px;
   color: var(--text-muted);
   font-size: 0.92rem;
   text-align: center;
 }
 
 .site-footer a {
-  color: var(--green-dark);
+  display: inline-flex;
+  align-items: center;
+  min-height: 34px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  color: var(--green);
   font-weight: 800;
+  margin-left: 4px;
+  padding: 0 9px;
   text-decoration: none;
 }
 
 .site-footer a:hover {
-  text-decoration: underline;
+  background: var(--surface-soft);
+  text-decoration: none;
 }
 
 .visually-hidden {
@@ -692,7 +729,7 @@ label {
   }
 
   .raw-input {
-    min-height: 230px;
+    min-height: 300px;
   }
 }
 

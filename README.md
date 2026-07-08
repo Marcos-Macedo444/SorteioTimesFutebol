@@ -1,6 +1,6 @@
 # Sorteador de Times da Pelada
 
-Site front-end only para sortear times de futebol/pelada de forma prática. O usuário cola a mensagem completa da pelada, o sistema extrai apenas os nomes, permite definir estrelas, sorteia times equilibrados, copia o resultado para WhatsApp, exporta em PDF e também gera uma nova mensagem completa substituindo a lista original pelos times sorteados.
+Site front-end only para sortear times de futebol/pelada de forma prática. O usuário cola a mensagem completa da pelada, mesmo com valor, Pix, horário, local, regras e avisos; o sistema ignora esse contexto, extrai apenas os jogadores numerados, permite definir estrelas, sorteia times equilibrados, copia o resultado para WhatsApp, exporta em PDF e também gera uma nova mensagem completa substituindo a lista original pelos times sorteados.
 
 ## Criador
 
@@ -14,7 +14,7 @@ Site: https://marcosmacedo.dev/
 - Extração inteligente de nomes em listas numeradas.
 - Edição, adição e remoção manual de jogadores.
 - Habilidades por estrelas de 1 a 5.
-- Opção "Não conheço" com estrela interna sorteada a cada sorteio.
+- Opção "Não conheço" com peso médio fixo de 3 estrelas no cálculo.
 - Sorteio balanceado por força, média, fortes, fracos, desconhecidos e histórico.
 - Vagas sobrando quando faltam jogadores para a configuração escolhida.
 - Suplentes quando há mais jogadores que vagas no primeiro sorteio.
@@ -68,7 +68,7 @@ npm run test
 npm run lint
 ```
 
-Os testes cobrem parser, linhas vazias, prefixos irrelevantes, nomes repetidos, desconhecidos com estrelas sorteadas, vagas sobrando, suplentes, WhatsApp, substituição da lista original e créditos do criador.
+Os testes cobrem parser, linhas vazias, prefixos irrelevantes, nomes repetidos, desconhecidos com peso médio fixo, vagas sobrando, suplentes, WhatsApp, substituição da lista original, input numérico mobile, favicon e créditos do criador.
 
 ## Deploy grátis na Vercel
 
@@ -88,7 +88,7 @@ Também não foi criado `vercel.json`, porque o app não usa React Router nem ro
 
 ## Como usar
 
-1. Cole a mensagem completa da pelada.
+1. Cole a mensagem completa da pelada, incluindo valor, Pix, horário, local, regras e avisos.
 2. Clique em `Extrair nomes`.
 3. Revise os jogadores e defina estrelas ou `Não conheço`.
 4. Configure quantidade de times e jogadores por time.
@@ -106,26 +106,20 @@ O parser detecta linhas que começam com número seguido de nome:
 - `1. Theo`
 - `1) Theo`
 
-Ele ignora Pix, valor, data, local, horários, regras, emojis, títulos e linhas numeradas vazias como `22`, `23` e `24`. Também normaliza espaços, preserva nomes compostos, mantém abreviações como `JG` e remove prefixos comuns antes do nome, como `e faixa`, `faixa`, `confirmado`, `pago`, `ok` e `presença`.
+Ele ignora Pix, valor, data, local, horários, regras, emojis, títulos e linhas numeradas vazias como `22`, `23` e `24`. O sistema extrai somente linhas numeradas com jogadores. Também normaliza espaços, preserva nomes compostos, mantém abreviações como `JG` e remove prefixos comuns antes do nome, como `e faixa`, `faixa`, `confirmado`, `pago`, `ok` e `presença`.
 
 Nomes repetidos são mantidos como jogadores separados, por exemplo `Matheus` e `Matheus #2`.
 
 ## Regra do "Não conheço"
 
-Jogadores marcados como `Não conheço` não ficam com 3 estrelas fixas. Em cada sorteio, o algoritmo atribui internamente uma estrela entre 1 e 5, considerando:
+Jogadores marcados como `Não conheço` entram no cálculo com peso médio de 3 estrelas, para manter o sorteio justo sem favorecer ou prejudicar nenhum time.
 
-- média dos jogadores conhecidos;
-- quantidade de jogadores fortes;
-- quantidade de jogadores fracos;
-- quantidade de desconhecidos;
-- quantidade de times.
-
-Esse valor vale apenas para o sorteio atual. Ao sortear novamente, outro valor interno pode ser usado. Na tela, no WhatsApp e no PDF, o jogador continua aparecendo como `Não conheço`, mas com a estrela aplicada de forma discreta para transparência.
+Esse valor é fixo no cálculo. Ao sortear novamente, o jogador desconhecido continua valendo 3 estrelas. Na tela, no WhatsApp e no PDF, ele aparece apenas como `Não conheço`.
 
 Exemplo:
 
 ```text
-* JG — Não conheço ⭐⭐⭐
+* JG — Não conheço
 ```
 
 ## Vagas sobrando
@@ -146,7 +140,7 @@ Se houver mais jogadores do que vagas configuradas, o sistema sorteia o primeiro
 
 ## Mensagem completa com times
 
-Além de copiar somente o resultado, o app consegue gerar uma mensagem completa baseada no texto original. Ele mantém valor, Pix, data, horário, local, avisos e regras, remove a lista numerada antiga e insere `⚽ TIMES SORTEADOS` no lugar.
+Além de copiar somente o resultado, o app consegue gerar uma mensagem completa baseada no texto original. Ele mantém valor, Pix, data, horário, local, avisos e regras, remove a lista numerada antiga e insere `⚽ TIMES SORTEADOS` no lugar. Assim a mensagem final pode preservar as informações originais e substituir apenas a lista pelos times sorteados.
 
 Exemplo de entrada:
 

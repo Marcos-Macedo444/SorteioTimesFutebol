@@ -19,6 +19,7 @@ import { createHistoryEntry, DEFAULT_DRAW_CONFIG, drawTeams } from "./lib/drawAl
 import { formatSkillLabel } from "./lib/formatResult";
 import { generateFullMessageWithDraw } from "./lib/originalMessage";
 import { exportDrawAsPdf } from "./lib/pdfExport";
+import { cleanNumericDraft, commitNumericDraft, isInNumericRange, readNumericDraft } from "./lib/numericInput";
 import { normalizeNameKey, parsePlayerNames } from "./lib/playerParser";
 import {
   clearAppState,
@@ -39,6 +40,33 @@ const skillOptions: Array<{ value: SkillRating; label: string }> = [
 
 type ThemeMode = "dark" | "light";
 const THEME_STORAGE_KEY = "sorteio-times-pelada:theme";
+const TEAM_COUNT_RANGE = { min: 2, max: 10 };
+const PLAYERS_PER_TEAM_RANGE = { min: 1, max: 30 };
+const PELADA_PLACEHOLDER = `Exemplo:
+
+VALOR: R$ 20,00
+Pix: será enviado no grupo
+
+Futebol sexta-feira
+21h às 23h - Green Ball
+
+LISTA ABERTA
+
+1 Theo
+2 Jayme
+3 Matheus
+4 João Victor
+5 Gabriel Santos
+6 Luiz Fernando
+
+Suplentes:
+
+⚠️ Regras:
+
+* Chegar 20 minutos antes
+* Jogo acaba com 2 gols ou 7 minutos
+
+O sistema vai puxar só os nomes numerados e depois pode montar a mensagem final com os times sorteados.`;
 
 function App() {
   const initialState = useMemo(() => loadAppState(), []);
@@ -46,6 +74,8 @@ function App() {
   const [rawText, setRawText] = useState(initialState.rawText);
   const [players, setPlayers] = useState<Player[]>(initialState.players);
   const [config, setConfig] = useState<DrawConfig>(initialState.config);
+  const [teamCountInput, setTeamCountInput] = useState(String(initialState.config.teamCount));
+  const [playersPerTeamInput, setPlayersPerTeamInput] = useState(String(initialState.config.playersPerTeam));
   const [history, setHistory] = useState(initialState.history);
   const [result, setResult] = useState<DrawResult | null>(null);
   const [statusMessage, setStatusMessage] = useState("Pronto para sortear.");
@@ -61,6 +91,11 @@ function App() {
     document.documentElement.dataset.theme = theme;
     localStorage.setItem(THEME_STORAGE_KEY, theme);
   }, [theme]);
+
+  useEffect(() => {
+    setTeamCountInput(String(config.teamCount));
+    setPlayersPerTeamInput(String(config.playersPerTeam));
+  }, [config.teamCount, config.playersPerTeam]);
 
   const validPlayers = players.filter((player) => player.name.trim().length > 0);
   const activeCapacity = config.drawAllPlayers ? validPlayers.length : config.teamCount * config.playersPerTeam;
@@ -127,6 +162,50 @@ function App() {
     setConfig((currentConfig) => ({
       ...currentConfig,
       teamNames: currentConfig.teamNames.map((teamName, teamIndex) => (teamIndex === index ? name : teamName))
+    }));
+  }
+
+  function handleTeamCountInputChange(value: string) {
+    const draft = cleanNumericDraft(value);
+    const parsed = readNumericDraft(draft);
+    setTeamCountInput(draft);
+
+    if (parsed !== null && isInNumericRange(parsed, TEAM_COUNT_RANGE)) {
+      handleTeamCountChange(parsed);
+    }
+  }
+
+  function handleTeamCountInputBlur() {
+    const nextValue = commitNumericDraft(teamCountInput, {
+      ...TEAM_COUNT_RANGE,
+      fallback: config.teamCount
+    });
+    setTeamCountInput(String(nextValue));
+    handleTeamCountChange(nextValue);
+  }
+
+  function handlePlayersPerTeamInputChange(value: string) {
+    const draft = cleanNumericDraft(value);
+    const parsed = readNumericDraft(draft);
+    setPlayersPerTeamInput(draft);
+
+    if (parsed !== null && isInNumericRange(parsed, PLAYERS_PER_TEAM_RANGE)) {
+      setConfig((currentConfig) => ({
+        ...currentConfig,
+        playersPerTeam: parsed
+      }));
+    }
+  }
+
+  function handlePlayersPerTeamInputBlur() {
+    const nextValue = commitNumericDraft(playersPerTeamInput, {
+      ...PLAYERS_PER_TEAM_RANGE,
+      fallback: config.playersPerTeam
+    });
+    setPlayersPerTeamInput(String(nextValue));
+    setConfig((currentConfig) => ({
+      ...currentConfig,
+      playersPerTeam: nextValue
     }));
   }
 
@@ -264,7 +343,7 @@ function App() {
             <div className="section-heading">
               <div>
                 <span className="eyebrow">Entrada</span>
-                <h2>Lista completa</h2>
+                <h2>Lista completa da pelada</h2>
               </div>
               <div className="button-row">
                 <button className="secondary-button" type="button" onClick={handleClearAll}>
@@ -273,16 +352,23 @@ function App() {
                 </button>
               </div>
             </div>
-            <p className="helper-text">
-              Cole a mensagem inteira da pelada. O sistema separa somente as linhas numeradas com jogadores.
-            </p>
+            <div className="entry-guidance">
+              <p>
+                Cole aqui a mensagem inteira da pelada. Pode vir com valor, Pix, horário, local, regras e avisos.
+              </p>
+              <p>
+                O sistema vai separar somente os jogadores numerados e, no final, você poderá gerar uma nova mensagem
+                mantendo as informações originais.
+              </p>
+            </div>
             <textarea
               className="raw-input"
               value={rawText}
               onChange={(event) => setRawText(event.target.value)}
-              placeholder="Cole aqui a mensagem da pelada."
+              placeholder={PELADA_PLACEHOLDER}
               spellCheck={false}
             />
+            <p className="input-tip">Dica: cole a mensagem completa. O sistema ignora o contexto e usa apenas os nomes numerados.</p>
             <div className="button-row">
               <button className="primary-button" type="button" onClick={handleExtractNames}>
                 <Sparkles aria-hidden="true" size={18} />
@@ -323,6 +409,8 @@ function App() {
                 />
               </div>
             </div>
+
+            <p className="helper-text">Não conheço: entra como peso médio de 3 estrelas no sorteio.</p>
 
             <div className="player-list">
               {players.length === 0 ? (
@@ -378,27 +466,24 @@ function App() {
               <label>
                 Quantidade de times
                 <input
-                  type="number"
-                  min={2}
-                  max={10}
-                  value={config.teamCount}
-                  onChange={(event) => handleTeamCountChange(Number(event.target.value))}
+                  type="text"
+                  inputMode="numeric"
+                  pattern="[0-9]*"
+                  value={teamCountInput}
+                  onChange={(event) => handleTeamCountInputChange(event.target.value)}
+                  onBlur={handleTeamCountInputBlur}
                 />
               </label>
               <label>
                 Jogadores por time
                 <input
-                  type="number"
-                  min={1}
-                  max={15}
-                  value={config.playersPerTeam}
+                  type="text"
+                  inputMode="numeric"
+                  pattern="[0-9]*"
+                  value={playersPerTeamInput}
                   disabled={config.drawAllPlayers}
-                  onChange={(event) =>
-                    setConfig((currentConfig) => ({
-                      ...currentConfig,
-                      playersPerTeam: clampNumber(Number(event.target.value), 1, 15)
-                    }))
-                  }
+                  onChange={(event) => handlePlayersPerTeamInputChange(event.target.value)}
+                  onBlur={handlePlayersPerTeamInputBlur}
                 />
               </label>
             </div>
@@ -530,7 +615,7 @@ function App() {
                     <li key={player.id}>
                       <span>{player.name}</span>
                       <span className={player.wasUnknown ? "unknown-badge" : "star-badge"}>
-                        {formatSkillLabel(player.skill, player.appliedSkill)}
+                        {formatSkillLabel(player.skill)}
                       </span>
                     </li>
                   ))}
@@ -555,7 +640,7 @@ function App() {
               <div>
                 {result.substitutes.map((player) => (
                   <span key={player.id}>
-                    {player.name} · {formatSkillLabel(player.skill, player.appliedSkill)}
+                    {player.name} · {formatSkillLabel(player.skill)}
                   </span>
                 ))}
               </div>

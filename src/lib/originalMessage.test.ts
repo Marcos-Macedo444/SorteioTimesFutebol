@@ -34,7 +34,8 @@ Suplentes:
     expect(generated).toContain("Pix: IREMOS DEFINIR");
     expect(generated).toContain("⚽ TIMES SORTEADOS");
     expect(generated).toContain("* Theo ⭐⭐⭐");
-    expect(generated).toContain("* JG — Não conheço ⭐⭐⭐");
+    expect(generated).toContain("* JG — Não conheço");
+    expect(generated).not.toContain("sorteado como");
     expect(generated).toContain("* *Vaga Sobrando*");
     expect(generated).toContain("⚠️🚨 Regras do FUT: ⚠️🚨");
     expect(generated).not.toContain("LISTA ABERTA");

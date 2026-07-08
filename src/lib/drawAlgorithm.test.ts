@@ -55,9 +55,14 @@ describe("drawAlgorithm", () => {
 
     expect(result.teams).toHaveLength(4);
     expect(result.balance.unknownRange).toBeLessThanOrEqual(1);
-    expect(result.teams.flatMap((team) => team.players).every((drawPlayer) => drawPlayer.appliedSkill >= 1)).toBe(true);
-    expect(new Set(result.teams.flatMap((team) => team.players).filter((drawPlayer) => drawPlayer.wasUnknown).map((drawPlayer) => drawPlayer.appliedSkill)).size).toBeGreaterThan(1);
+    expect(
+      result.teams
+        .flatMap((team) => team.players)
+        .filter((drawPlayer) => drawPlayer.wasUnknown)
+        .every((drawPlayer) => drawPlayer.appliedSkill === 3)
+    ).toBe(true);
     expect(result.copiedText).toContain("Não conheço");
+    expect(result.copiedText).not.toContain("sorteado como");
   });
 
   it("separates extra players as substitutes when the fixed size does not use everyone", () => {
@@ -96,6 +101,36 @@ describe("drawAlgorithm", () => {
 
     expect(result.teams.reduce((sum, team) => sum + team.vacancyCount, 0)).toBe(1);
     expect(result.copiedText).toContain("*Vaga Sobrando*");
+  });
+
+  it("uses 24 configured slots for 4 teams with 6 players each", () => {
+    const players = Array.from({ length: 20 }, (_, index) => player(`Jogador ${index + 1}`, 3));
+    const result = drawTeams(players, {
+      teamCount: 4,
+      playersPerTeam: 6,
+      drawAllPlayers: false,
+      teamNames: ["Time 1", "Time 2", "Time 3", "Time 4"],
+      attempts: 300
+    });
+
+    expect(result.teams).toHaveLength(4);
+    expect(result.teams.every((team) => team.targetSize === 6)).toBe(true);
+    expect(result.teams.reduce((sum, team) => sum + team.targetSize, 0)).toBe(24);
+    expect(result.teams.reduce((sum, team) => sum + team.vacancyCount, 0)).toBe(4);
+  });
+
+  it("moves players above 24 configured slots to substitutes", () => {
+    const players = Array.from({ length: 27 }, (_, index) => player(`Jogador ${index + 1}`, 3));
+    const result = drawTeams(players, {
+      teamCount: 4,
+      playersPerTeam: 6,
+      drawAllPlayers: false,
+      teamNames: ["Time 1", "Time 2", "Time 3", "Time 4"],
+      attempts: 300
+    });
+
+    expect(result.teams.flatMap((team) => team.players)).toHaveLength(24);
+    expect(result.substitutes).toHaveLength(3);
   });
 
   it("stores pair history that can be reused in later draws", () => {
