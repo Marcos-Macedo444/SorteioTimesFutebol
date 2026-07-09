@@ -19,6 +19,7 @@ Site: https://marcosmacedo.dev/
 - Vagas sobrando quando faltam jogadores para a configuração escolhida.
 - Suplentes quando há mais jogadores que vagas no primeiro sorteio.
 - Histórico local dos últimos 20 sorteios para reduzir repetição de pares.
+- Copiar modelo de lista pronto para usar como base no grupo da pelada.
 - Copiar resultado pronto para WhatsApp.
 - Copiar mensagem completa da pelada com a lista original substituída pelos times.
 - Exportar PDF via janela de impressão.
@@ -88,13 +89,18 @@ Também não foi criado `vercel.json`, porque o app não usa React Router nem ro
 
 ## Como usar
 
-1. Cole a mensagem completa da pelada, incluindo valor, Pix, horário, local, regras e avisos.
-2. Clique em `Extrair nomes`.
-3. Revise os jogadores e defina estrelas ou `Não conheço`.
-4. Configure quantidade de times e jogadores por time.
-5. Clique em `Sortear times`.
-6. Copie somente o resultado ou a mensagem completa com os times.
-7. Exporte o PDF se quiser compartilhar ou arquivar.
+1. Se ainda não tiver uma lista pronta, clique em `Copiar modelo de lista` e use o modelo como base no grupo da pelada.
+2. Cole a mensagem completa da pelada, incluindo valor, Pix, horário, local, regras e avisos.
+3. Clique em `Extrair nomes`.
+4. Revise os jogadores e defina estrelas ou `Não conheço`.
+5. Configure quantidade de times e jogadores por time.
+6. Clique em `Sortear times`.
+7. Copie somente o resultado ou a mensagem completa com os times.
+8. Exporte o PDF se quiser compartilhar ou arquivar.
+
+## Modelo de lista
+
+O botão `Copiar modelo de lista` fica próximo do campo da lista completa. Ele copia um formato ideal para a área de transferência, com valor, Pix, dados do responsável, data, horário, local, 24 vagas numeradas e espaço para regras. Depois é só colar no WhatsApp e preencher com as informações da pelada.
 
 ## Parser de nomes
 

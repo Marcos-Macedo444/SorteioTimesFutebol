@@ -39,9 +39,54 @@ const skillOptions: Array<{ value: SkillRating; label: string }> = [
 ];
 
 type ThemeMode = "dark" | "light";
+type CopyStatus = "idle" | "copied" | "error";
+
 const THEME_STORAGE_KEY = "sorteio-times-pelada:theme";
 const TEAM_COUNT_RANGE = { min: 2, max: 10 };
 const PLAYERS_PER_TEAM_RANGE = { min: 1, max: 30 };
+const LIST_TEMPLATE = `VALOR: R$
+Pix:
+
+Nome:
+Banco:
+
+Futebol (INFORMAR DATA)
+De XX:XX às XX:XX - LOCAL
+
+LISTA ABERTA
+
+1-
+2-
+3-
+4-
+5-
+6-
+7-
+8-
+9-
+10-
+11-
+12-
+13-
+14-
+15-
+16-
+17-
+18-
+19-
+20-
+21-
+22-
+23-
+24-
+
+⚠️🚨 Regras do FUT: ⚠️🚨
+
+1#
+2#
+3#
+4#
+5#`;
 const PELADA_PLACEHOLDER = `Exemplo:
 
 VALOR: R$ 20,00
@@ -79,8 +124,9 @@ function App() {
   const [history, setHistory] = useState(initialState.history);
   const [result, setResult] = useState<DrawResult | null>(null);
   const [statusMessage, setStatusMessage] = useState("Pronto para sortear.");
-  const [copyState, setCopyState] = useState<"idle" | "copied" | "error">("idle");
-  const [fullMessageCopyState, setFullMessageCopyState] = useState<"idle" | "copied" | "error">("idle");
+  const [templateCopyState, setTemplateCopyState] = useState<CopyStatus>("idle");
+  const [copyState, setCopyState] = useState<CopyStatus>("idle");
+  const [fullMessageCopyState, setFullMessageCopyState] = useState<CopyStatus>("idle");
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
@@ -252,6 +298,17 @@ function App() {
     }
   }
 
+  async function handleCopyListTemplate() {
+    try {
+      await copyText(LIST_TEMPLATE);
+      setTemplateCopyState("copied");
+      setStatusMessage("Modelo de lista copiado para usar como base.");
+    } catch {
+      setTemplateCopyState("error");
+      setStatusMessage("Não foi possível copiar o modelo automaticamente.");
+    }
+  }
+
   function handleExportPdf() {
     if (!result) {
       return;
@@ -301,6 +358,7 @@ function App() {
     setConfig(DEFAULT_DRAW_CONFIG);
     setHistory([]);
     setResult(null);
+    setTemplateCopyState("idle");
     setCopyState("idle");
     setFullMessageCopyState("idle");
     setStatusMessage("Dados salvos limpos.");
@@ -360,6 +418,25 @@ function App() {
                 O sistema vai separar somente os jogadores numerados e, no final, você poderá gerar uma nova mensagem
                 mantendo as informações originais.
               </p>
+            </div>
+            <div className="template-helper">
+              <p>Sem uma lista pronta? Copie o modelo abaixo e use como base no grupo da pelada.</p>
+              <div className="button-row template-actions">
+                <button className="secondary-button" type="button" onClick={handleCopyListTemplate}>
+                  <Clipboard aria-hidden="true" size={18} />
+                  Copiar modelo de lista
+                </button>
+                {templateCopyState === "copied" ? (
+                  <span className="inline-feedback" role="status">
+                    Modelo copiado!
+                  </span>
+                ) : null}
+                {templateCopyState === "error" ? (
+                  <span className="inline-feedback error-feedback" role="status">
+                    Não foi possível copiar.
+                  </span>
+                ) : null}
+              </div>
             </div>
             <textarea
               className="raw-input"

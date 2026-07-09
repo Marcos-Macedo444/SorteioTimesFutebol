@@ -19,6 +19,19 @@ describe("App footer credits", () => {
     expect(source).toContain("PELADA_PLACEHOLDER");
   });
 
+  it("offers a copyable list template near the input", () => {
+    const source = readFileSync(new URL("./App.tsx", import.meta.url), "utf8");
+
+    expect(source).toContain("LIST_TEMPLATE");
+    expect(source).toContain("Copiar modelo de lista");
+    expect(source).toContain("Modelo copiado!");
+    expect(source).toContain("VALOR: R$");
+    expect(source).toContain("Futebol (INFORMAR DATA)");
+    expect(source).toContain("LISTA ABERTA");
+    expect(source).toContain("24-");
+    expect(source).toContain("Regras do FUT");
+  });
+
   it("references the custom favicon", () => {
     const indexHtml = readFileSync(new URL("../index.html", import.meta.url), "utf8");
     const favicon = readFileSync(new URL("../public/favicon.svg", import.meta.url), "utf8");

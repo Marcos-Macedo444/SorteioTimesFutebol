@@ -255,6 +255,38 @@ h3 {
   padding: 12px;
 }
 
+.template-helper {
+  display: grid;
+  gap: 10px;
+  margin-bottom: 12px;
+  color: var(--text-muted);
+  font-size: 0.94rem;
+  line-height: 1.4;
+}
+
+.template-actions {
+  margin-top: 0;
+}
+
+.inline-feedback {
+  display: inline-flex;
+  min-height: 36px;
+  align-items: center;
+  border: 1px solid var(--soft-border);
+  border-radius: 8px;
+  background: var(--soft-bg);
+  color: var(--soft-text);
+  font-size: 0.9rem;
+  font-weight: 800;
+  padding: 7px 10px;
+}
+
+.error-feedback {
+  border-color: var(--danger-border);
+  background: var(--danger-bg);
+  color: var(--danger);
+}
+
 .raw-input {
   width: 100%;
   min-height: 330px;
