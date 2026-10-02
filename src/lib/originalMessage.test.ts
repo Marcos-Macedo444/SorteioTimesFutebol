@@ -33,8 +33,8 @@ Suplentes:
     expect(generated).toContain("VALOR: IREMOS DEFINIR💰");
     expect(generated).toContain("Pix: IREMOS DEFINIR");
     expect(generated).toContain("⚽ TIMES SORTEADOS");
-    expect(generated).toContain("* Theo ⭐⭐⭐");
-    expect(generated).toContain("* JG — Não conheço");
+    expect(generated).toContain("* Theo");
+    expect(generated).toContain("* JG");
     expect(generated).not.toContain("sorteado como");
     expect(generated).toContain("* *Vaga Sobrando*");
     expect(generated).toContain("⚠️🚨 Regras do FUT: ⚠️🚨");
@@ -98,7 +98,7 @@ Suplentes:
     expect(generated).toContain("21h as 23h Green Ball");
     expect(generated).toContain("(2) HORAS DE FUTEBOL");
     expect(generated).toContain("(2) HORAS DE FUTEBOL\n\n⚽ TIMES SORTEADOS");
-    expect(generated).toContain("* JG — Não conheço");
+    expect(generated).toContain("* JG");
     expect(generated).toContain("* *Vaga Sobrando*");
     expect(generated).toContain("⚠️🚨 Regras do FUT: ⚠️🚨");
     expect(generated).toContain("* Tempo esgotou, sair LINHA DE FUNDO o jogo acaba;");

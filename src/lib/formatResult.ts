@@ -39,19 +39,26 @@ export function formatTeamsBlockForOriginalMessage(result: DrawResult): string {
 
   for (const team of result.teams) {
     lines.push(team.name);
-    lines.push(...formatTeamPlayerLinesForWhatsApp(team.players, team.vacancyCount));
+    lines.push(...formatTeamPlayerLinesForOriginalMessage(team.players, team.vacancyCount));
     lines.push("");
   }
 
   if (result.substitutes.length > 0) {
     lines.push("Suplentes:");
     for (const player of result.substitutes) {
-      lines.push(`* ${formatPlayerForWhatsApp(player)}`);
+      lines.push(`* ${player.name}`);
     }
     lines.push("");
   }
 
   return lines.join("\n").trim();
+}
+
+function formatTeamPlayerLinesForOriginalMessage(players: DrawPlayer[], vacancyCount: number): string[] {
+  return [
+    ...players.map((player) => `* ${player.name}`),
+    ...Array.from({ length: vacancyCount }, () => "* *Vaga Sobrando*")
+  ];
 }
 
 export function formatTeamPlayerLinesForWhatsApp(players: DrawPlayer[], vacancyCount: number): string[] {
